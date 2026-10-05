@@ -904,6 +904,53 @@ def _cmd_ui(argv):
             client.stop()
 
 
+def _cmd_worktree(args):
+    """niji worktree new|list|rm: isolate agent work on its own git branch."""
+    from . import worktree
+    usage = "usage: niji worktree new <name> [base] | list | rm <name> [--force]"
+    try:
+        if args[:1] == ["new"] and len(args) in (2, 3):
+            path = worktree.create(args[1], ".", args[2] if len(args) == 3 else "HEAD")
+            print(f"[ok] worktree ready: {path}\n     branch niji/{args[1]}\n     cd {path} && niji")
+        elif args[:1] == ["list"]:
+            for item in worktree.list_worktrees("."):
+                print(f"{item.get('branch', '').removeprefix('refs/heads/')}  {item.get('worktree')}")
+        elif args[:1] == ["rm"] and len(args) in (2, 3):
+            worktree.remove(args[1], ".", force="--force" in args[2:])
+            print(f"[ok] removed worktree {args[1]}")
+        else:
+            print(usage)
+            return 2
+    except worktree.WorktreeError as exc:
+        print(f"[error] {exc}")
+        return 1
+    return 0
+
+
+def _cmd_events(args):
+    """niji events [session-id] [--follow-types t1,t2]: replay the typed event log."""
+    from . import events
+    if not args:
+        for sid in events.list_sessions()[:20]:
+            print(sid)
+        return 0
+    try:
+        log = events.EventLog(args[0])
+    except ValueError as exc:
+        print(f"[error] {exc}")
+        return 1
+    types = None
+    if len(args) >= 3 and args[1] == "--types":
+        types = set(args[2].split(","))
+    found = log.read(types=types)
+    if not found:
+        print("[no events]")
+        return 1
+    for event in found:
+        print(events.format_event(event))
+    return 0
+
+
 def main():
     argv = sys.argv[1:]
 
@@ -911,6 +958,11 @@ def main():
     if argv and argv[0] == "ui":
         _cmd_ui(argv[1:])
         return
+
+    if argv and argv[0] == "worktree":
+        sys.exit(_cmd_worktree(argv[1:]))
+    if argv and argv[0] == "events":
+        sys.exit(_cmd_events(argv[1:]))
 
     if argv and argv[0] == "connectors":
         _cmd_connectors(argv[1:])
