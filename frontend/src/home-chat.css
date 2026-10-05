@@ -1,0 +1,92 @@
+/* Tasklet-inspired Home: quiet header, unboxed messages, and a compact composer. */
+.app.home-shell > .main > .topbar { display: none; }
+.app.home-shell > .main > .content { padding: 0; }
+.home-chat-view {
+  height: 100%; min-height: 0; max-width: 980px; margin: 0 auto; padding: 0 24px;
+  display: flex; flex-direction: column;
+}
+.home-chat-header {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; padding: 16px 2px 13px; border-bottom: 1px solid var(--line);
+}
+.home-chat-title { min-width: 0; }
+.home-chat-title .eyebrow { font-size: 9px; }
+.home-chat-header h1 {
+  max-width: min(58vw, 660px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: 600 16px/1.35 Manrope, sans-serif; letter-spacing: -.02em; margin: 3px 0 0;
+}
+.home-chat-actions { display: flex; align-items: center; gap: 7px; flex: 0 0 auto; }
+.home-chat-actions .secondary { white-space: nowrap; padding: 7px 10px; }
+.home-messages {
+  flex: 1 1 auto; min-height: 0; overflow: auto; padding: 24px 8px 18px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.home-messages .welcome { margin: auto; }
+.home-chat-view .message,
+.home-chat-view .message.user,
+.home-chat-view .message.assistant {
+  width: min(780px, 100%); max-width: 100%; align-self: flex-start; margin: 0;
+  padding: 2px 0; border: 0; border-radius: 0; background: transparent; box-shadow: none;
+  text-align: left;
+}
+.home-chat-view .message .msglabel {
+  margin: 0 0 4px; color: var(--muted); font-size: 10px; font-weight: 600;
+}
+.home-chat-view .message .status-tag {
+  padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--muted); font-size: 10px;
+}
+.home-chat-view .message .msgbody { color: var(--text); font-size: 15px; line-height: 1.72; }
+.home-chat-view .message.live-status { border: 0; box-shadow: none; }
+.home-chat-view .message.live-status .msgbody {
+  width: fit-content; color: transparent; background: linear-gradient(100deg, var(--muted) 15%, #f4f7f3 48%, var(--muted) 82%);
+  background-size: 220% 100%; -webkit-background-clip: text; background-clip: text;
+  animation: niji-status-shimmer 2.1s linear infinite;
+}
+@keyframes niji-status-shimmer { to { background-position: -220% 0; } }
+.home-composer { flex: 0 0 auto; margin: 0; padding: 10px 0 12px; background: transparent; }
+.home-composer .composerbox {
+  padding: 10px 12px 8px; border-radius: 22px; background: var(--surface);
+}
+.home-composer textarea {
+  min-height: 44px; max-height: 180px; resize: vertical; font-size: 14px; line-height: 1.55;
+}
+.home-composer .composer-toolbar { min-height: 34px; }
+.home-composer .composerfoot { justify-content: center; padding-top: 7px; }
+.route-label { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; }
+.route-label .status-dot { width: 7px; height: 7px; border-radius: 50%; }
+.home-model-picker { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; }
+.home-model-picker select {
+  min-width: 150px; max-width: min(300px, 32vw); border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface2); color: var(--text); padding: 7px 26px 7px 11px; font: inherit; font-size: 11px; cursor: pointer;
+}
+.home-model-picker select:focus { outline: 2px solid color-mix(in srgb, var(--cyan) 58%, transparent); outline-offset: 1px; }
+.home-model-picker option { background: var(--surface2); color: var(--text); }
+.retry-message { margin-top: 10px; }
+.light .home-chat-header { border-color: #e2e8ef; }
+.light .home-chat-view .message .msgbody { color: #263248; }
+.light .home-chat-view .message.live-status .msgbody { background-image: linear-gradient(100deg, #65727a 15%, #202a30 48%, #65727a 82%); }
+.light .home-composer { background: transparent; }
+@media (max-width: 760px) {
+  .home-chat-view { padding: 0 16px; }
+  .home-messages { padding: 20px 3px 14px; }
+}
+@media (max-width: 520px) {
+  .home-chat-view { padding: 0 10px; }
+  .home-chat-header { padding: 12px 2px 10px; gap: 8px; }
+  .home-chat-title .eyebrow { font-size: 8px; }
+  .home-chat-header h1 { max-width: 40vw; font-size: 14px; }
+  .home-chat-actions { gap: 5px; }
+  .home-chat-actions .secondary { padding: 6px 7px; font-size: 9px; }
+  .home-messages { padding: 16px 2px 12px; gap: 17px; }
+  .home-chat-view .message .msgbody { font-size: 14px; }
+  .home-composer { padding: 7px 0 7px; }
+  .home-composer .composerbox { padding: 8px 9px 7px; }
+  .home-composer textarea { min-height: 42px; }
+  .home-composer .composerfoot { font-size: 9px; }
+  .home-model-picker { gap: 5px; }
+  .home-model-picker select { min-width: 0; max-width: 42vw; padding: 6px 21px 6px 9px; font-size: 10px; }
+  .route-label { font-size: 9px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-chat-view .message.live-status .msgbody { animation: none; color: var(--muted); background: none; -webkit-text-fill-color: currentColor; }
+}

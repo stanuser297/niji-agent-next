@@ -1,0 +1,82 @@
+services:
+  - type: web
+    name: niji-cloud-api
+    runtime: python
+    region: singapore
+    plan: 0.5c-512mb
+    numInstances: 1
+    autoDeployTrigger: checksPass
+    buildCommand: python -m pip install --upgrade pip && python -m pip install '.[cloud]'
+    startCommand: python -m niji.cloud_api
+    healthCheckPath: /healthz
+    envVars:
+      - key: NIJI_CLOUD_AUTH_MODE
+        value: oidc
+      - key: NIJI_CLOUD_OIDC_ISSUER
+        sync: false
+      - key: NIJI_CLOUD_OIDC_AUDIENCE
+        sync: false
+      - key: NIJI_CLOUD_OIDC_JWKS_URL
+        sync: false
+      - key: NIJI_CLOUD_EXECUTION_MODE
+        value: prompt
+      - key: NIJI_CLOUD_MAX_ACTIVE_RUNS
+        value: "5"
+      - key: NIJI_CLOUD_MAX_SUBMISSIONS_PER_HOUR
+        value: "20"
+      - key: NIJI_CLOUD_MAX_REQUESTS_PER_MINUTE
+        value: "120"
+      - key: NIJI_CLOUD_MAX_REQUESTS_PER_IP_PER_MINUTE
+        value: "120"
+      - key: NIJI_CLOUD_MAX_MONTHLY_PROMPT_TOKENS
+        value: "2000000"
+      - key: NIJI_CLOUD_MAX_MONTHLY_COMPLETION_TOKENS
+        value: "160000"
+      - key: NIJI_CLOUD_RUN_PROMPT_TOKEN_CAP
+        value: "200000"
+      - key: NIJI_CLOUD_RUN_COMPLETION_TOKEN_CAP
+        value: "16384"
+      - key: NIJI_CLOUD_DATABASE_URL
+        fromDatabase:
+          name: niji-cloud-db
+          property: connectionString
+  - type: worker
+    name: niji-cloud-worker
+    runtime: python
+    region: singapore
+    plan: 0.5c-512mb
+    numInstances: 1
+    autoDeployTrigger: checksPass
+    buildCommand: python -m pip install --upgrade pip && python -m pip install '.[cloud]'
+    startCommand: python -m niji.cloud_worker
+    envVars:
+      - key: NIJI_CLOUD_WORKER_TENANT_MODE
+        value: all
+      - key: NIJI_CLOUD_DATABASE_URL
+        fromDatabase:
+          name: niji-cloud-db
+          property: connectionString
+      - key: NIJI_CLOUD_PROVIDER
+        value: openai
+      - key: NIJI_CLOUD_EXECUTION_MODE
+        value: prompt
+      - key: NIJI_CLOUD_MAX_MONTHLY_PROMPT_TOKENS
+        value: "2000000"
+      - key: NIJI_CLOUD_MAX_MONTHLY_COMPLETION_TOKENS
+        value: "160000"
+      - key: NIJI_CLOUD_RUN_PROMPT_TOKEN_CAP
+        value: "200000"
+      - key: NIJI_CLOUD_RUN_COMPLETION_TOKEN_CAP
+        value: "16384"
+      - key: NIJI_CLOUD_PROVIDER_API_KEY
+        sync: false
+      - key: E2B_API_KEY
+        sync: false
+
+databases:
+  - name: niji-cloud-db
+    databaseName: niji_runs
+    user: niji
+    region: singapore
+    plan: 0.5c-1g
+    ipAllowList: []
