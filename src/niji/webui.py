@@ -213,6 +213,13 @@ class NijiWebUI:
                     self._json(200, ui._state()); return
                 if parsed.path == "/api/sessions":
                     self._json(200, {"sessions": ui._list_sessions()}); return
+                if parsed.path == "/api/events":
+                    log = getattr(ui.agent, "events", None)
+                    try:
+                        limit = max(1, min(int(parse_qs(parsed.query).get("limit", ["200"])[0]), 1000))
+                    except ValueError:
+                        limit = 200
+                    self._json(200, {"events": (log.read() if log else [])[-limit:]}); return
                 if parsed.path == "/api/models":
                     self._json(200, ui._model_state()); return
                 if parsed.path.startswith("/api/sessions/") and parsed.path.endswith("/export"):
