@@ -17,6 +17,7 @@ from openai import OpenAI
 
 from .compaction import estimate_tokens, maybe_compact
 from .config import MEMORY_FILE, SESSION_DIR, load_config
+from .events import EventLog
 from .instructions import discover_skills, load_project_guidance, skill_index
 from .planning import load_plan, save_plan
 from .tools import CORE_SCHEMAS, SUBAGENT_TOOLS, dispatch
@@ -131,6 +132,9 @@ class Agent:
             raise TypeError("tool_dispatcher must be callable")
         self.session_id = datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:6]
         self.todos = {"items": [] if self.cloud_mode else load_plan(self.session_id)}
+        self.events = None if self.cloud_mode else EventLog(self.session_id)
+        if getattr(self, "events", None):
+            self.events.emit("session.start", model=self.model, approval=self.approval)
         # Non-None only while the web UI is executing a user-approved plan.
         # This enables server-side checklist and tool-order enforcement.
         self.approved_plan = None
@@ -234,6 +238,9 @@ class Agent:
         ]
         self.messages = [dict(message) for message in self._base_messages]
         self.session_id = datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:6]
+        if getattr(self, "events", None):
+            self.events = EventLog(self.session_id)
+            self.events.emit("session.start", model=self.model, approval=self.approval, workspace=root.name)
         self.usage = {"prompt_tokens": 0, "completion_tokens": 0, "turns": 0}
         self.usage_reported = False
         self.usage_complete = False
@@ -256,6 +263,8 @@ class Agent:
         with self._activity_lock:
             self.activity.append(event)
             self.activity = self.activity[-24:]
+        if getattr(self, "events", None):
+            self.events.emit("activity", level=level, message=message)
         callback = self.activity_callback
         if callback:
             try:
@@ -395,6 +404,8 @@ class Agent:
 
     def cancel(self):
         """Request a cooperative stop at the next model-stream or tool boundary."""
+        if getattr(self, "events", None):
+            self.events.emit("run.cancel")
         with self._pause_control_lock:
             self._cancel_event.set()
             # A paused run must be woken so cancellation cannot deadlock behind the pause gate.
@@ -959,6 +970,8 @@ class Agent:
         needs_approval = (policy == "ask" or
                           (policy == "default" and self.approval == "ask" and not no_approval_needed))
         if needs_approval:
+            if getattr(self, "events", None):
+                self.events.emit("approval.requested", tool=name, args=args)
             if self.approval_callback is not None:
                 try:
                     approved = bool(self.approval_callback(name, args))
@@ -969,10 +982,14 @@ class Agent:
                            else json.dumps(args, default=str)[:300])
                 print(f"\nApprove {name}: {preview}")
                 approved = input("Approve? [y/N] ").strip().lower() == "y"
+            if getattr(self, "events", None):
+                self.events.emit("approval.decided", tool=name, approved=approved)
             if not approved:
                 self._record_activity("DENIED", f"User declined {name}")
                 return "[denied by user]"
 
+        if getattr(self, "events", None):
+            self.events.emit("tool.start", tool=name, args=args)
         ctx = {"agent": self, "depth": self.depth, "todos": self.todos,
                "mcp": {c.name: c for c in self.mcp_clients}}
         try:
@@ -1005,6 +1022,9 @@ class Agent:
                 completion = "Git push completed to the configured remote"
             self._record_activity("TOOL_DONE", completion)
 
+        if getattr(self, "events", None):
+            self.events.emit("tool.done", tool=name, ok=not self._tool_result_failed(result),
+                             result=str(result)[:300])
         if self.verbose and result:
             preview = result if isinstance(result, str) else str(result)[:300]
             self._print(preview[:600])
