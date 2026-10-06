@@ -38,12 +38,12 @@ body.light .message.user .msglabel{color:#584a89}
 @keyframes statuspulse{50%{opacity:.5;box-shadow:0 0 0 4px color-mix(in srgb,var(--cyan) 6%,transparent)}}
 .message.live-status.has-stream{display:flex;flex-wrap:wrap}
 .message.live-status .msglabel{display:none}.message.live-status .worktext,.message.live-status.has-stream .worktext{display:block;flex:1;min-width:0;overflow:hidden}
-.message.live-status .workmeta{display:block;width:100%;max-width:100%;padding:0;margin:0;border:0;color:var(--muted);font-size:14px;font-weight:500;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.message.live-status .workmeta{display:block;width:100%;max-width:100%;min-width:0;padding:0;margin:0;border:0;color:var(--muted);font-size:14px;font-weight:500;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.message.live-status:not(.paused) .workmeta{color:transparent;background-image:linear-gradient(100deg,var(--muted) 0%,var(--muted) 42%,#fff 50%,var(--muted) 58%,var(--muted) 100%);background-size:220% 100%;background-position:100% 0;background-repeat:no-repeat;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:niji-live-status-shimmer 2.1s linear infinite}.message.live-status.paused .workmeta{color:var(--amber);background:none;-webkit-text-fill-color:currentColor;animation:none}@keyframes niji-live-status-shimmer{to{background-position:0 0}}
 .message.live-status .workdetail,.message.live-status .run-elapsed,.message.live-status .plan-progress,.message.live-status .run-activity{display:none!important}
 .message.live-status .msgbody{display:none}
 .message.live-status.has-stream .msgbody{display:block;flex:none;width:100%;margin:8px 0 0;padding:0;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--text);font-size:13px;line-height:1.6}
 body.light .message.live-status .workmeta{color:#687080}
-@media(prefers-reduced-motion:reduce){.message.live-status:before{animation:none}}
+@media(prefers-reduced-motion:reduce){.message.live-status:before,.message.live-status:not(.paused) .workmeta{animation:none}.message.live-status:not(.paused) .workmeta{color:var(--muted);background:none;-webkit-text-fill-color:currentColor}}
 
 /* Niji home refresh: generous spacing, calm contrast, and visible run state. */
 #view-overview .pagehead{align-items:center;margin:2px 0 18px;padding:4px 2px}
