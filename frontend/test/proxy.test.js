@@ -29,7 +29,7 @@ test('capabilities are forwarded only to the explicit Niji endpoint with the bea
   try {
     const res = responseRecorder();
     await proxy({ method: 'GET', headers: { authorization: 'Bearer session-token' } }, res, 'capabilities');
-    assert.equal(request.url, 'https://niji-cloud-api-production.up.railway.app/v1/capabilities');
+    assert.equal(request.url, 'https://your-api.example.com/v1/capabilities');
     assert.equal(request.options.headers.Authorization, 'Bearer session-token');
     assert.equal(res.statusCode, 200);
   } finally { globalThis.fetch = originalFetch; }
@@ -44,7 +44,7 @@ test('account-data deletion forwards explicit confirmation and no request body',
     await proxy({ method: 'DELETE', headers: {
       authorization: 'Bearer session-token', 'x-confirm-data-deletion': 'delete',
     } }, res, 'account/data');
-    assert.equal(request.url, 'https://niji-cloud-api-production.up.railway.app/v1/account/data');
+    assert.equal(request.url, 'https://your-api.example.com/v1/account/data');
     assert.equal(request.options.method, 'DELETE');
     assert.equal(request.options.headers['X-Confirm-Data-Deletion'], 'delete');
     assert.equal(request.options.body, undefined);

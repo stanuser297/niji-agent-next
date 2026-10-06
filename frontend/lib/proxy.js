@@ -1,4 +1,4 @@
-const DEFAULT_API = 'https://niji-cloud-api-production.up.railway.app';
+const DEFAULT_API = 'https://your-api.example.com';
 const isRunRoute = (route) => /^runs\/[A-Za-z0-9_-]{1,100}$/.test(route);
 const isCancelRoute = (route) => /^runs\/[A-Za-z0-9_-]{1,100}\/cancel$/.test(route);
 const isArtifactListRoute = (route) => /^runs\/[A-Za-z0-9_-]{1,100}\/artifacts$/.test(route);

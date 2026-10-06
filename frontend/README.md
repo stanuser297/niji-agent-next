@@ -22,7 +22,7 @@ The interface reports the server's effective execution mode rather than implying
   - `VITE_FIREBASE_PROJECT_ID` (`niji-agent`)
   - `VITE_FIREBASE_APP_ID`
   - `VITE_FIREBASE_MESSAGING_SENDER_ID` (if shown in the Firebase web config)
-  - `NIJI_API_BASE_URL=https://niji-cloud-api-production.up.railway.app`
+  - `NIJI_API_BASE_URL=https://your-api.example.com`
 - In Firebase Authentication, enable Google sign-in and add the deployed Vercel hostname under Authorized domains. Firebase ID tokens are verified by the Railway API against the project issuer/audience; the web configuration must refer to the same Firebase project.
 - The frontend exposes only explicit allowlisted routes: health, capabilities, run create/list/detail/cancel, tenant artifact listing/download, and confirmed tenant-data deletion. Artifact downloads remain authenticated and are streamed as bytes; deletion requires the explicit `X-Confirm-Data-Deletion: delete` header.
 
