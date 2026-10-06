@@ -13,6 +13,8 @@ MEMORY_FILE = CONFIG_DIR / "MEMORY.md"
 PRESETS = {
     "openai":     {"base_url": "https://api.openai.com/v1",
                    "env_key": "OPENAI_API_KEY", "model": "gpt-5"},
+    "xai":        {"base_url": "https://api.x.ai/v1",
+                   "env_key": "XAI_API_KEY", "model": "grok-4.7"},
     "openrouter": {"base_url": "https://api.openrouter.ai/api/v1",
                    "env_key": "OPENROUTER_API_KEY", "model": "openai/gpt-4o-mini"},
     "nvidia":     {"base_url": "https://integrate.api.nvidia.com/v1",

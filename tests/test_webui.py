@@ -801,6 +801,29 @@ if(emoji.textContent!=='✅ done 😂')throw new Error('emoji or escaped punctua
         self.assertEqual(saved["api_keys"]["openai"], secret)
         self.assertEqual(saved["models"]["openai"], "gpt-test-model")
 
+    def test_xai_grok_is_available_as_a_first_class_builtin_provider(self):
+        from niji.config import PRESETS
+        from niji.setup_wizard import WIZARD_PROVIDERS
+        self.assertEqual(PRESETS["xai"], {
+            "base_url": "https://api.x.ai/v1", "env_key": "XAI_API_KEY",
+            "model": "grok-4.7"})
+        self.assertIn(("xai", "xAI (Grok)"), WIZARD_PROVIDERS)
+        secret = "xai-test-secret"
+        with (patch("niji.webui.load_config", return_value={}),
+              patch("niji.setup_wizard.test_connection", return_value=(True, "ok")) as test,
+              patch("niji.webui.save_config") as save):
+            result = json.loads(self.request("/api/models", {
+                "action": "add-provider", "provider": "xai", "api_key": secret,
+                "model": "grok-4.7",
+            }, self.ui.token).read())
+        self.assertTrue(result["ok"])
+        self.assertNotIn(secret, json.dumps(result))
+        test.assert_called_once_with({"provider": "xai", "base_url": "https://api.x.ai/v1",
+                                      "api_key": secret, "model": "grok-4.7"})
+        saved = save.call_args.args[0]
+        self.assertEqual(saved["api_keys"]["xai"], secret)
+        self.assertEqual(saved["models"]["xai"], "grok-4.7")
+
     def test_provider_add_rejects_invalid_custom_endpoint_and_fields(self):
         with patch("niji.webui.save_config") as save:
             for payload in (
@@ -817,21 +840,21 @@ if(emoji.textContent!=='✅ done 😂')throw new Error('emoji or escaped punctua
         save.assert_not_called()
 
     def test_provider_add_accepts_verified_custom_compatible_endpoint_and_keeps_key_private(self):
-        secret = "xai-secret-never-return-this"
-        payload = {"action": "add-provider", "provider": "xai",
-                   "base_url": "https://api.x.ai/v1/", "api_key": secret,
+        secret = "custom-secret-never-return-this"
+        payload = {"action": "add-provider", "provider": "my_xai_gateway",
+                   "base_url": "https://gateway.example/v1/", "api_key": secret,
                    "model": "grok-test-model"}
         with (patch("niji.webui.load_config", return_value={}),
               patch("niji.setup_wizard.test_connection", return_value=(True, "ok")) as test,
               patch("niji.webui.save_config") as save):
             result = json.loads(self.request("/api/models", payload, self.ui.token).read())
         self.assertTrue(result["ok"])
-        self.assertEqual(result["provider"], "xai")
+        self.assertEqual(result["provider"], "my_xai_gateway")
         self.assertNotIn(secret, json.dumps(result))
-        test.assert_called_once_with({"provider": "xai", "base_url": "https://api.x.ai/v1",
+        test.assert_called_once_with({"provider": "my_xai_gateway", "base_url": "https://gateway.example/v1",
                                       "api_key": secret, "model": "grok-test-model"})
-        stored = save.call_args.args[0]["custom_providers"]["xai"]
-        self.assertEqual(stored, {"base_url": "https://api.x.ai/v1",
+        stored = save.call_args.args[0]["custom_providers"]["my_xai_gateway"]
+        self.assertEqual(stored, {"base_url": "https://gateway.example/v1",
                                   "model": "grok-test-model", "api_key": secret})
 
     def test_saved_keyless_custom_endpoint_is_configured(self):

@@ -16,6 +16,7 @@ console = Console()
 WIZARD_PROVIDERS = [
     ("openrouter", "OpenRouter (recommended — one key, many models)"),
     ("openai", "OpenAI"),
+    ("xai", "xAI (Grok)"),
     ("anthropic", "Anthropic (Claude)"),
     ("gemini", "Google Gemini"),
     ("groq", "Groq"),
