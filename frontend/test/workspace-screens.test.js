@@ -57,9 +57,29 @@ test('home shows the user request and a simple queued status without infrastruct
   const run = { run_id: 'r1', status: 'queued', created_at: old, updated_at: old, payload: { prompt: 'hi' }, events: [{ detail: 'Run accepted' }] };
   const html = renderWorkspace({ ...baseState, lastPrompt: 'hi', activeRun: run }, components);
   assert.match(html, /hi/);
-  assert.match(html, /taking longer than usual/);
+  assert.match(html, /Still waiting to start · 2m/);
+  assert.match(html, /class="live-status-line is-queued"/);
   assert.match(html, /id="cancel-run"/);
   assert.doesNotMatch(html, /worker|provider|cloud execution/i);
+  const queuedWhilePolling = renderWorkspace({ ...baseState, lastPrompt: 'hi', activeRun: run, busy: true }, components);
+  assert.match(queuedWhilePolling, /class="live-status-line is-queued"/);
+  assert.doesNotMatch(queuedWhilePolling, /live-status-line is-queued is-active/);
+});
+
+test('running home chat shows one real phase line with a shimmer-ready active state', () => {
+  const run = { run_id: 'r2', status: 'running', payload: { prompt: 'build this' }, events: [{ status: 'running', detail: 'Agent is planning' }] };
+  const html = renderWorkspace({ ...baseState, lastPrompt: 'build this', activeRun: run }, components);
+  assert.match(html, /class="live-status-line is-active"/);
+  assert.match(html, /Planning the next step…/);
+  assert.match(html, /id="cancel-run"/);
+  assert.doesNotMatch(html, /status-tag running|worktext|Agent is planning/);
+});
+
+test('live chat activity never echoes arbitrary event text into the compact status', () => {
+  const run = { run_id: 'r3', status: 'running', payload: { prompt: 'help' }, events: [{ detail: 'private /home/person/secret.txt' }] };
+  const html = renderWorkspace({ ...baseState, lastPrompt: 'help', activeRun: run }, components);
+  assert.match(html, /Working on your request…/);
+  assert.doesNotMatch(html, /secret\.txt|private \/home/);
 });
 
 test('home shows a completed response and preserves the conversation title for the restored run', () => {
@@ -79,6 +99,15 @@ test('chat screen keeps the cloud prompt composer, project controls and actual r
   assert.match(html, /project-input/);
   assert.match(html, /task output/);
   assert.match(html, /Session details/);
+});
+
+test('full chat uses the same single-line active status and avoids a duplicate header status', () => {
+  const run = { run_id: 'r4', status: 'running', payload: { prompt: 'research this' }, events: [{ detail: 'Agent is working' }] };
+  const html = renderWorkspace({ ...baseState, screen: 'chat', lastPrompt: 'research this', activeRun: run }, components);
+  assert.match(html, /class="live-status-line is-active"/);
+  assert.match(html, /Working on your task…/);
+  assert.match(html, /id="cancel-run"/);
+  assert.doesNotMatch(html, /id="chat-status"|worktext/);
 });
 
 test('history provides filtering over loaded cloud runs and discloses its limit', () => {
@@ -133,6 +162,10 @@ test('style keeps the restrained graphite and lime palette with a mobile-safe fi
   assert.match(homeCss, /\.home-chat-view \.message \.status-tag[\s\S]*?border:\s*0/);
   assert.match(homeCss, /\.app\.home-shell > \.main > \.topbar\s*\{\s*display:\s*none/);
   assert.match(homeCss, /\.home-chat-view \.message\.user[\s\S]*?align-self:\s*flex-start/);
+  assert.match(homeCss, /\.live-status-text[\s\S]*?white-space:\s*nowrap/);
+  assert.match(homeCss, /\.live-status-line\.is-active \.live-status-text/);
+  assert.match(homeCss, /linear-gradient\(100deg,[^;]*#fff 50%/);
+  assert.match(homeCss, /prefers-reduced-motion:\s*reduce/);
   assert.match(homeCss, /niji-status-shimmer/);
 });
 
