@@ -801,17 +801,44 @@ if(emoji.textContent!=='✅ done 😂')throw new Error('emoji or escaped punctua
         self.assertEqual(saved["api_keys"]["openai"], secret)
         self.assertEqual(saved["models"]["openai"], "gpt-test-model")
 
-    def test_provider_add_rejects_unknown_custom_endpoint_and_invalid_fields(self):
+    def test_provider_add_rejects_invalid_custom_endpoint_and_fields(self):
         with patch("niji.webui.save_config") as save:
             for payload in (
-                {"action": "add-provider", "provider": "custom", "base_url": "https://attacker.example", "api_key": "secret", "model": "m"},
-                {"action": "add-provider", "provider": "bad/name", "api_key": "secret", "model": "m"},
+                {"action": "add-provider", "provider": "custom", "api_key": "secret", "model": "m"},
+                {"action": "add-provider", "provider": "bad/name", "base_url": "https://api.example.com/v1", "api_key": "secret", "model": "m"},
                 {"action": "add-provider", "provider": "openai", "api_key": "secret", "model": ""},
+                {"action": "add-provider", "provider": "xai", "base_url": "http://api.x.ai/v1", "api_key": "secret", "model": "m"},
+                {"action": "add-provider", "provider": "xai", "base_url": "https://user:pass@api.x.ai/v1", "api_key": "secret", "model": "m"},
+                {"action": "add-provider", "provider": "openai", "base_url": "https://custom.example/v1", "api_key": "secret", "model": "m"},
             ):
                 with self.subTest(payload=payload), self.assertRaises(urllib.error.HTTPError) as invalid:
                     self.request("/api/models", payload, self.ui.token)
                 self.assertEqual(invalid.exception.code, 400)
         save.assert_not_called()
+
+    def test_provider_add_accepts_verified_custom_compatible_endpoint_and_keeps_key_private(self):
+        secret = "xai-secret-never-return-this"
+        payload = {"action": "add-provider", "provider": "xai",
+                   "base_url": "https://api.x.ai/v1/", "api_key": secret,
+                   "model": "grok-test-model"}
+        with (patch("niji.webui.load_config", return_value={}),
+              patch("niji.setup_wizard.test_connection", return_value=(True, "ok")) as test,
+              patch("niji.webui.save_config") as save):
+            result = json.loads(self.request("/api/models", payload, self.ui.token).read())
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["provider"], "xai")
+        self.assertNotIn(secret, json.dumps(result))
+        test.assert_called_once_with({"provider": "xai", "base_url": "https://api.x.ai/v1",
+                                      "api_key": secret, "model": "grok-test-model"})
+        stored = save.call_args.args[0]["custom_providers"]["xai"]
+        self.assertEqual(stored, {"base_url": "https://api.x.ai/v1",
+                                  "model": "grok-test-model", "api_key": secret})
+
+    def test_saved_keyless_custom_endpoint_is_configured(self):
+        from niji.model_catalog import provider_is_configured
+        config = {"custom_providers": {"local_gateway": {
+            "base_url": "http://localhost:1234/v1", "model": "local-model"}}}
+        self.assertTrue(provider_is_configured("local_gateway", config))
 
     def test_provider_add_fails_closed_and_local_ollama_needs_no_key(self):
         with (patch("niji.webui.load_config", return_value={}),
@@ -920,7 +947,10 @@ if(emoji.textContent!=='✅ done 😂')throw new Error('emoji or escaped punctua
         self.assertIn('id="provider-manager"', PAGE)
         self.assertIn('id="provider-api-key" type="password"', PAGE)
         self.assertIn('id="provider-name" aria-label="Provider to connect"', PAGE)
-        self.assertNotIn('id="provider-base-url"', PAGE)
+        self.assertIn('id="custom-provider-name"', PAGE)
+        self.assertIn('id="custom-provider-base-url"', PAGE)
+        self.assertIn("Custom OpenAI-compatible endpoint…", PAGE)
+        self.assertIn("function toggleCustomProviderFields()", PAGE)
         self.assertIn("action:'add-provider'", PAGE)
         self.assertIn("action:'remove-provider'", PAGE)
         self.assertIn("requestAnimationFrame(()=>anchorSentMessage(sentMessage))", PAGE)

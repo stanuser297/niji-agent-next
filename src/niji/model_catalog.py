@@ -31,6 +31,7 @@ def provider_is_configured(name, config=None):
     if custom:
         generic_key_provider = os.environ.get("NIJI_PROVIDER") or cfg.get("provider")
         return bool(custom.get("api_key")
+                    or custom.get("base_url")
                     or cfg.get("api_keys", {}).get(name)
                     or (custom.get("env_key") and os.environ.get(custom["env_key"]))
                     or (os.environ.get("NIJI_API_KEY") and generic_key_provider == name)

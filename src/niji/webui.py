@@ -1707,8 +1707,38 @@ class NijiWebUI:
         name = data.get("provider")
         model_id = data.get("model")
         raw_key = data.get("api_key", "")
-        if not isinstance(name, str) or name not in PRESETS:
-            return 400, {"error": "Choose one of the supported providers in Settings"}
+        if not isinstance(name, str):
+            return 400, {"error": "Choose a valid provider name"}
+        is_builtin = name in PRESETS
+        if is_builtin:
+            if data.get("base_url"):
+                return 400, {"error": "That name is a built-in provider; choose a different name for a custom endpoint"}
+            preset = PRESETS[name]
+            base_url = preset["base_url"]
+        else:
+            if not re.fullmatch(r"[a-z][a-z0-9_-]{1,31}", name) or name in ("custom", "__custom__"):
+                return 400, {"error": "Provider name must start with a letter and use 2–32 lowercase letters, numbers, _ or -"}
+            raw_base_url = data.get("base_url")
+            if (not isinstance(raw_base_url, str)
+                    or not 1 <= len(raw_base_url.strip()) <= 2048
+                    or any(ord(ch) <= 32 for ch in raw_base_url.strip())):
+                return 400, {"error": "Enter a valid HTTPS base URL for this OpenAI-compatible provider"}
+            try:
+                parsed_base_url = urlsplit(raw_base_url.strip())
+                hostname = (parsed_base_url.hostname or "").lower()
+                # Never send provider credentials over cleartext to a remote host.
+                if (parsed_base_url.scheme != "https"
+                        and not (parsed_base_url.scheme == "http"
+                                 and hostname in ("localhost", "127.0.0.1", "::1"))):
+                    return 400, {"error": "Use HTTPS for remote providers; HTTP is allowed only for localhost"}
+                if (not hostname or parsed_base_url.username or parsed_base_url.password
+                        or parsed_base_url.query or parsed_base_url.fragment):
+                    return 400, {"error": "Provider URL must have a host and cannot contain credentials, query, or fragment"}
+                parsed_base_url.port  # Validate the optional port before saving.
+                base_url = raw_base_url.strip().rstrip("/")
+            except (TypeError, ValueError):
+                return 400, {"error": "Enter a valid provider URL"}
+            preset = {"base_url": base_url, "env_key": None}
         if not isinstance(model_id, str):
             return 400, {"error": "Enter a model ID"}
         model_id = model_id.strip()
@@ -1716,7 +1746,6 @@ class NijiWebUI:
             return 400, {"error": "Model ID must be 1–200 visible characters"}
         if not isinstance(raw_key, str) or len(raw_key) > 4096 or any(ord(ch) < 32 for ch in raw_key):
             return 400, {"error": "API key is invalid or too long"}
-        preset = PRESETS[name]
         with self._lock:
             if self._busy or self._agent_mutating or self._connector_mutating or self._model_mutating:
                 return 409, {"error": "Wait until the current task or setup operation finishes"}
@@ -1730,16 +1759,24 @@ class NijiWebUI:
                 api_keys = cfg.get("api_keys", {})
                 if not isinstance(api_keys, dict):
                     api_keys = {}
+                custom_providers = cfg.get("custom_providers", {})
+                if not isinstance(custom_providers, dict):
+                    custom_providers = {}
+                old_custom = custom_providers.get(name, {})
+                if not isinstance(old_custom, dict):
+                    old_custom = {}
                 api_key = (api_keys.get(name)
                            or (preset.get("env_key") and os.environ.get(preset["env_key"]))
+                           or old_custom.get("api_key")
                            or (name == (os.environ.get("NIJI_PROVIDER") or cfg.get("provider")
                                         or getattr(self.agent, "provider_name", None)
                                         or "") and os.environ.get("NIJI_API_KEY"))
                            or "")
-            if preset.get("env_key") and not api_key:
+            if is_builtin and preset.get("env_key") and not api_key:
                 return 400, {"error": "Enter the provider API key"}
-            provider_cfg = {"provider": name, "base_url": preset["base_url"],
-                            "api_key": api_key or "ollama", "model": model_id}
+            provider_cfg = {"provider": name, "base_url": base_url,
+                            "api_key": api_key or ("ollama" if name == "ollama" else "custom"),
+                            "model": model_id}
             try:
                 from .setup_wizard import test_connection
                 ok, _message = test_connection(provider_cfg)
@@ -1751,14 +1788,24 @@ class NijiWebUI:
                 api_keys = cfg.get("api_keys", {})
                 if not isinstance(api_keys, dict):
                     api_keys = {}
-                if api_key and preset.get("env_key"):
-                    api_keys[name] = api_key
-                    cfg["api_keys"] = api_keys
                 models = cfg.get("models", {})
                 if not isinstance(models, dict):
                     models = {}
-                models[name] = model_id
-                cfg["models"] = models
+                if is_builtin:
+                    if api_key and preset.get("env_key"):
+                        api_keys[name] = api_key
+                        cfg["api_keys"] = api_keys
+                    models[name] = model_id
+                    cfg["models"] = models
+                else:
+                    custom_providers = cfg.get("custom_providers", {})
+                    if not isinstance(custom_providers, dict):
+                        custom_providers = {}
+                    custom_cfg = {"base_url": base_url, "model": model_id}
+                    if api_key:
+                        custom_cfg["api_key"] = api_key
+                    custom_providers[name] = custom_cfg
+                    cfg["custom_providers"] = custom_providers
                 save_config(cfg)
                 self._known_secrets()
             except Exception as exc:
